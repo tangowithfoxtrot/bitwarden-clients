@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
-import { homedir } from "os";
+import { createHash } from "crypto";
+import { homedir, userInfo } from "os";
 
 import * as ipc from "node-ipc";
 
@@ -8,6 +9,11 @@ ipc.config.retry = 1500;
 ipc.config.logger = console.warn; // Stdout is used for native messaging
 if (process.platform === "darwin") {
   ipc.config.socketRoot = `${homedir()}/tmp/`;
+} else if (process.platform === "win32") {
+  const s = userInfo().username + "+" + process.env["APPDATA"];
+  // Let node-ipc use a unique IPC pipe //./pipe/{xxxxxxx}app.bitwarden per user.
+  // Hashing prevents problems with reserved characters and file length limitations.
+  ipc.config.socketRoot = "{" + createHash("sha1").update(s).digest("hex") + "}";
 }
 
 export default class IPC {
