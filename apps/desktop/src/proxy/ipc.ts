@@ -1,19 +1,39 @@
 /* eslint-disable no-console */
 import { createHash } from "crypto";
+import { existsSync, mkdirSync } from "fs";
 import { homedir, userInfo } from "os";
+import { join as path_join } from "path";
 
 import * as ipc from "node-ipc";
+
+export function getIpcSocketRoot(): string | null {
+  let socketRoot = null;
+
+  switch (process.platform) {
+    case "darwin": {
+      const ipcSocketRootDir = path_join(homedir(), "tmp");
+      if (!existsSync(ipcSocketRootDir)) {
+        mkdirSync(ipcSocketRootDir);
+      }
+      socketRoot = ipcSocketRootDir + "/";
+      break;
+    }
+    case "win32": {
+      const s = userInfo().username + "+" + process.env["APPDATA"];
+      // Let node-ipc use a unique IPC pipe //./pipe/{xxxxxxx}app.bitwarden per user.
+      // Hashing prevents problems with reserved characters and file length limitations.
+      socketRoot = createHash("sha1").update(s).digest("hex") + ".";
+    }
+  }
+  return socketRoot;
+}
 
 ipc.config.id = "proxy";
 ipc.config.retry = 1500;
 ipc.config.logger = console.warn; // Stdout is used for native messaging
-if (process.platform === "darwin") {
-  ipc.config.socketRoot = `${homedir()}/tmp/`;
-} else if (process.platform === "win32") {
-  const s = userInfo().username + "+" + process.env["APPDATA"];
-  // Let node-ipc use a unique IPC pipe //./pipe/{xxxxxxx}app.bitwarden per user.
-  // Hashing prevents problems with reserved characters and file length limitations.
-  ipc.config.socketRoot = "{" + createHash("sha1").update(s).digest("hex") + "}";
+const ipcSocketRoot = getIpcSocketRoot();
+if (ipcSocketRoot != null) {
+  ipc.config.socketRoot = ipcSocketRoot;
 }
 
 export default class IPC {
