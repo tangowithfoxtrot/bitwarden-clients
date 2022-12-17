@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { createHash } from "crypto";
 import { existsSync, mkdirSync } from "fs";
-import { homedir, userInfo } from "os";
+import { homedir } from "os";
 import { join as path_join } from "path";
 
 import * as ipc from "node-ipc";
@@ -19,10 +19,9 @@ export function getIpcSocketRoot(): string | null {
       break;
     }
     case "win32": {
-      const s = userInfo().username + "+" + process.env["APPDATA"];
-      // Let node-ipc use a unique IPC pipe //./pipe/{xxxxxxx}app.bitwarden per user.
+      // Let node-ipc use a unique IPC pipe //./pipe/xxxxxxxxxxxxxxxxx.app.bitwarden per user.
       // Hashing prevents problems with reserved characters and file length limitations.
-      socketRoot = createHash("sha1").update(s).digest("hex") + ".";
+      socketRoot = createHash("sha1").update(homedir()).digest("hex") + ".";
     }
   }
   return socketRoot;
