@@ -269,7 +269,8 @@ jobs:
       - name: Zip Safari build artifact
         run: |
           cd apps/browser/dist
-          zip dist-safari.zip ./Safari/**/build/Release/safari.appex -r
+          ls -la
+          zip -r dist-safari.zip . -i ./Safari/**/build/Release/safari.appex
           pwd
           ls -la
 
