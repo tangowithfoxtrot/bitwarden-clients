@@ -441,6 +441,7 @@ jobs:
     name: MacOS Build
     runs-on: macos-11
     needs:
+      - browser-build
       - setup
     env:
       _PACKAGE_VERSION: ${{ needs.setup.outputs.package_version }}
@@ -519,7 +520,52 @@ jobs:
 
       - name: Build application (dev)
         run: npm run build
+      - name: Download Browser artifact
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          path: ${{ github.workspace }}/browser-build-artifacts
 
+      - name: Unzip Safari artifact
+        run: |
+          SAFARI_DIR=$(find $GITHUB_WORKSPACE/browser-build-artifacts -name 'dist-safari-*.zip')
+          echo $SAFARI_DIR
+          unzip $SAFARI_DIR/dist-safari.zip -d $GITHUB_WORKSPACE/browser-build-artifacts
+
+      - name: Load Safari extension for .dmg
+        run: |
+          mkdir PlugIns
+          cp -r $GITHUB_WORKSPACE/browser-build-artifacts/Safari/dmg/build/Release/safari.appex PlugIns/safari.appex
+
+      - name: Build application (dist)
+        run: npm run pack:mac
+
+      - name: Upload .zip artifact
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: Bitwarden-${{ env._PACKAGE_VERSION }}-universal-mac.zip
+          path: apps/desktop/dist/Bitwarden-${{ env._PACKAGE_VERSION }}-universal-mac.zip
+          if-no-files-found: error
+
+      - name: Upload .dmg artifact
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: Bitwarden-${{ env._PACKAGE_VERSION }}-universal.dmg
+          path: apps/desktop/dist/Bitwarden-${{ env._PACKAGE_VERSION }}-universal.dmg
+          if-no-files-found: error
+
+      - name: Upload .dmg blockmap artifact
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: Bitwarden-${{ env._PACKAGE_VERSION }}-universal.dmg.blockmap
+          path: apps/desktop/dist/Bitwarden-${{ env._PACKAGE_VERSION }}-universal.dmg.blockmap
+          if-no-files-found: error
+
+      - name: Upload auto-update artifact
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: ${{ needs.setup.outputs.release_channel }}-mac.yml
+          path: apps/desktop/dist/${{ needs.setup.outputs.release_channel }}-mac.yml
+          if-no-files-found: error
 
   browser-build:
     name: Browser Build
